@@ -1,11 +1,11 @@
 require("dotenv").config();
 const {
-  renderError,
   parseBoolean,
   parseArray,
   clampValue,
   CONSTANTS,
 } = require("../src/common/utils");
+const ResponseType = require("../src/common/responseType");
 const fetchStats = require("../src/fetchers/stats-fetcher");
 const renderStatsCard = require("../src/cards/stats-card");
 const blacklist = require("../src/common/blacklist");
@@ -31,17 +31,24 @@ module.exports = async (req, res) => {
     custom_title,
     locale,
     disable_animations,
+    response_type,
+    callback,
   } = req.query;
   let stats;
+  const { contentType, error, render } = ResponseType({
+    response_type,
+    callback,
+    renderCard: renderStatsCard,
+  });
 
-  res.setHeader("Content-Type", "image/svg+xml");
+  res.setHeader("Content-Type", contentType);
 
   if (blacklist.includes(username)) {
-    return res.send(renderError("Something went wrong"));
+    return res.send(error("Something went wrong"));
   }
 
   if (locale && !isLocaleAvailable(locale)) {
-    return res.send(renderError("Something went wrong", "Language not found"));
+    return res.send(error("Something went wrong", "Language not found"));
   }
 
   try {
@@ -60,7 +67,7 @@ module.exports = async (req, res) => {
     res.setHeader("Cache-Control", `public, max-age=${cacheSeconds}`);
 
     return res.send(
-      renderStatsCard(stats, {
+      render(stats, {
         hide: parseArray(hide),
         show_icons: parseBoolean(show_icons),
         hide_title: parseBoolean(hide_title),
@@ -79,6 +86,6 @@ module.exports = async (req, res) => {
       }),
     );
   } catch (err) {
-    return res.send(renderError(err.message, err.secondaryMessage));
+    return res.send(error(err.message, err.secondaryMessage));
   }
 };

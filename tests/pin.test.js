@@ -30,23 +30,29 @@ const data_user = {
 
 const mock = new MockAdapter(axios);
 
+const faker = (query, data) => {
+  const req = {
+    query: {
+      username: "anuraghazra",
+      repo: "convoychat",
+      ...query,
+    },
+  };
+  const res = {
+    setHeader: jest.fn(),
+    send: jest.fn(),
+  };
+  mock.onPost("https://api.github.com/graphql").reply(200, data);
+  return { req, res };
+};
+
 afterEach(() => {
   mock.reset();
 });
 
 describe("Test /api/pin", () => {
   it("should test the request", async () => {
-    const req = {
-      query: {
-        username: "anuraghazra",
-        repo: "convoychat",
-      },
-    };
-    const res = {
-      setHeader: jest.fn(),
-      send: jest.fn(),
-    };
-    mock.onPost("https://api.github.com/graphql").reply(200, data_user);
+    const { req, res } = faker({}, data_user);
 
     await pin(req, res);
 
@@ -55,22 +61,16 @@ describe("Test /api/pin", () => {
   });
 
   it("should get the query options", async () => {
-    const req = {
-      query: {
-        username: "anuraghazra",
-        repo: "convoychat",
+    const { req, res } = faker(
+      {
         title_color: "fff",
         icon_color: "fff",
         text_color: "fff",
         bg_color: "fff",
         full_name: "1",
       },
-    };
-    const res = {
-      setHeader: jest.fn(),
-      send: jest.fn(),
-    };
-    mock.onPost("https://api.github.com/graphql").reply(200, data_user);
+      data_user,
+    );
 
     await pin(req, res);
 
@@ -81,19 +81,10 @@ describe("Test /api/pin", () => {
   });
 
   it("should render error card if user repo not found", async () => {
-    const req = {
-      query: {
-        username: "anuraghazra",
-        repo: "convoychat",
-      },
-    };
-    const res = {
-      setHeader: jest.fn(),
-      send: jest.fn(),
-    };
-    mock
-      .onPost("https://api.github.com/graphql")
-      .reply(200, { data: { user: { repository: null }, organization: null } });
+    const { req, res } = faker(
+      {},
+      { data: { user: { repository: null }, organization: null } },
+    );
 
     await pin(req, res);
 
@@ -102,19 +93,10 @@ describe("Test /api/pin", () => {
   });
 
   it("should render error card if org repo not found", async () => {
-    const req = {
-      query: {
-        username: "anuraghazra",
-        repo: "convoychat",
-      },
-    };
-    const res = {
-      setHeader: jest.fn(),
-      send: jest.fn(),
-    };
-    mock
-      .onPost("https://api.github.com/graphql")
-      .reply(200, { data: { user: null, organization: { repository: null } } });
+    const { req, res } = faker(
+      {},
+      { data: { user: null, organization: { repository: null } } },
+    );
 
     await pin(req, res);
 
@@ -122,5 +104,15 @@ describe("Test /api/pin", () => {
     expect(res.send).toBeCalledWith(
       renderError("Organization Repository Not found"),
     );
+  });
+
+  it("should handle response_type", async () => {
+    const TestResponseType = require("./ResponseType");
+    await TestResponseType({
+      faker: (query) => faker(query, data_user),
+      api: pin,
+      data: data_repo.repository,
+      renderCard: renderRepoCard,
+    });
   });
 });

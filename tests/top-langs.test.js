@@ -66,22 +66,28 @@ const langs = {
 
 const mock = new MockAdapter(axios);
 
+const faker = (query, data) => {
+  const req = {
+    query: {
+      username: "anuraghazra",
+      ...query,
+    },
+  };
+  const res = {
+    setHeader: jest.fn(),
+    send: jest.fn(),
+  };
+  mock.onPost("https://api.github.com/graphql").reply(200, data);
+  return { req, res };
+};
+
 afterEach(() => {
   mock.reset();
 });
 
 describe("Test /api/top-langs", () => {
   it("should test the request", async () => {
-    const req = {
-      query: {
-        username: "anuraghazra",
-      },
-    };
-    const res = {
-      setHeader: jest.fn(),
-      send: jest.fn(),
-    };
-    mock.onPost("https://api.github.com/graphql").reply(200, data_langs);
+    const { req, res } = faker({}, data_langs);
 
     await topLangs(req, res);
 
@@ -90,9 +96,8 @@ describe("Test /api/top-langs", () => {
   });
 
   it("should work with the query options", async () => {
-    const req = {
-      query: {
-        username: "anuraghazra",
+    const { req, res } = faker(
+      {
         hide_title: true,
         card_width: 100,
         title_color: "fff",
@@ -100,12 +105,8 @@ describe("Test /api/top-langs", () => {
         text_color: "fff",
         bg_color: "fff",
       },
-    };
-    const res = {
-      setHeader: jest.fn(),
-      send: jest.fn(),
-    };
-    mock.onPost("https://api.github.com/graphql").reply(200, data_langs);
+      data_langs,
+    );
 
     await topLangs(req, res);
 
@@ -123,20 +124,21 @@ describe("Test /api/top-langs", () => {
   });
 
   it("should render error card on error", async () => {
-    const req = {
-      query: {
-        username: "anuraghazra",
-      },
-    };
-    const res = {
-      setHeader: jest.fn(),
-      send: jest.fn(),
-    };
-    mock.onPost("https://api.github.com/graphql").reply(200, error);
+    const { req, res } = faker({}, error);
 
     await topLangs(req, res);
 
     expect(res.setHeader).toBeCalledWith("Content-Type", "image/svg+xml");
     expect(res.send).toBeCalledWith(renderError(error.errors[0].message));
+  });
+
+  it("should handle response_type", async () => {
+    const TestResponseType = require("./ResponseType");
+    await TestResponseType({
+      faker: (query) => faker(query, data_langs),
+      api: topLangs,
+      data: langs,
+      renderCard: renderTopLanguages,
+    });
   });
 });

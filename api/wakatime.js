@@ -1,11 +1,11 @@
 require("dotenv").config();
 const {
-  renderError,
   parseBoolean,
   clampValue,
   CONSTANTS,
   isLocaleAvailable,
 } = require("../src/common/utils");
+const ResponseType = require("../src/common/responseType");
 const { fetchLast7Days } = require("../src/fetchers/wakatime-fetcher");
 const wakatimeCard = require("../src/cards/wakatime-card");
 
@@ -25,12 +25,19 @@ module.exports = async (req, res) => {
     custom_title,
     locale,
     layout,
+    response_type,
+    callback,
   } = req.query;
+  const { contentType, error, render } = ResponseType({
+    response_type,
+    callback,
+    renderCard: wakatimeCard,
+  });
 
-  res.setHeader("Content-Type", "image/svg+xml");
+  res.setHeader("Content-Type", contentType);
 
   if (locale && !isLocaleAvailable(locale)) {
-    return res.send(renderError("Something went wrong", "Language not found"));
+    return res.send(error("Something went wrong", "Language not found"));
   }
 
   try {
@@ -49,7 +56,7 @@ module.exports = async (req, res) => {
     res.setHeader("Cache-Control", `public, max-age=${cacheSeconds}`);
 
     return res.send(
-      wakatimeCard(last7Days, {
+      render(last7Days, {
         custom_title,
         hide_title: parseBoolean(hide_title),
         hide_border: parseBoolean(hide_border),
@@ -65,6 +72,6 @@ module.exports = async (req, res) => {
       }),
     );
   } catch (err) {
-    return res.send(renderError(err.message, err.secondaryMessage));
+    return res.send(error(err.message, err.secondaryMessage));
   }
 };

@@ -221,4 +221,14 @@ describe("Test /api/", () => {
       ),
     );
   });
+
+  it("should handle response_type", async () => {
+    const TestResponseType = require("./ResponseType");
+    await TestResponseType({
+      faker: (query) => faker(query, data),
+      api,
+      data: stats,
+      renderCard: renderStatsCard,
+    });
+  });
 });
